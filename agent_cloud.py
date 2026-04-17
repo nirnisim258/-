@@ -9,7 +9,6 @@ import io
 import os
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import quote_plus
 
 import anthropic
 import httpx
@@ -119,16 +118,26 @@ def _save_csv(csv_content: str, output_file: Path) -> str:
         return f"❌ שגיאה בשמירה: {e}"
 
 
-def _build_direct_urls() -> dict[str, list[str]]:
-    templates = SEARCH_CONFIG.get("search_url_templates", {})
+SITE_DOMAINS = {
+    "Drushim":    "drushim.co.il",
+    "AllJobs":    "alljobs.co.il",
+    "JobsIL":     "jobs.il",
+    "GotFriends": "gotfriends.co.il",
+}
+
+
+def _build_site_search_queries() -> dict[str, list[str]]:
+    """Build web_search site: queries for Israeli job boards."""
     short_queries = SEARCH_CONFIG.get("short_queries", {})
     all_terms = short_queries.get("hebrew", []) + short_queries.get("english", [])
-    urls: dict[str, list[str]] = {}
-    for site, template in templates.items():
+    result: dict[str, list[str]] = {}
+    for site, domain in SITE_DOMAINS.items():
         if not SEARCH_CONFIG["sites"].get(site, False):
             continue
-        urls[site] = [template.format(query=quote_plus(t)) for t in all_terms]
-    return urls
+        # 3 representative queries per site to keep max_uses budget
+        sample = all_terms[:3]
+        result[site] = [f'site:{domain} "{t}"' for t in sample]
+    return result
 
 
 def _build_linkedin_queries() -> list[str]:
@@ -141,7 +150,7 @@ def _build_linkedin_queries() -> list[str]:
 
 
 def _build_prompt(cv_content: str, output_file: Path) -> str:
-    direct_urls = _build_direct_urls()
+    site_queries  = _build_site_search_queries()
     linkedin_queries = _build_linkedin_queries()
 
     cv_section = (
@@ -150,13 +159,13 @@ def _build_prompt(cv_content: str, output_file: Path) -> str:
         else "\n**לא סופקו קורות חיים** — ציון יבוסס על הגדרות החיפוש בלבד.\n"
     )
 
-    fetch_blocks = ""
-    for site, urls in direct_urls.items():
-        fetch_blocks += f"\n**{site}** — אסוף כל URL עם web_fetch:\n"
-        for url in urls[:4]:  # limit per site to avoid overload
-            fetch_blocks += f"  • {url}\n"
-
     linkedin_block = "\n".join(f"  • {q}" for q in linkedin_queries[:10])
+
+    il_blocks = ""
+    for site, queries in site_queries.items():
+        il_blocks += f"\n**{site}:**\n"
+        for q in queries:
+            il_blocks += f"  • {q}\n"
 
     return f"""
 אתה סוכן חיפוש עבודה מקצועי. בצע את כל השלבים הבאים בדייקנות מרבית.
@@ -176,11 +185,12 @@ def _build_prompt(cv_content: str, output_file: Path) -> str:
 לכל תוצאה: שמור כותרת, חברה, מיקום, URL.
 
 ════════════════════════════════════════
-שלב 2 – אתרים ישראלים (web_fetch ישיר)
+שלב 2 – אתרי עבודה ישראליים (web_search עם site:)
 ════════════════════════════════════════
-{fetch_blocks}
-מכל דף חלץ: כותרת משרה, חברה, מיקום, URL המשרה.
-אם דף מחזיר שגיאה — המשך לדף הבא.
+חשוב: האתרים הישראליים מרונדרים בJavaScript — השתמש ב-web_search עם site: כדי לקבל תוצאות אינדקס גוגל.
+בצע web_search עבור כל שאילתה (כל אחת בנפרד):
+{il_blocks}
+לכל תוצאה: שמור כותרת, חברה, מיקום, URL המשרה הישיר.
 
 ════════════════════════════════════════
 שלב 3 – פרטי משרות
