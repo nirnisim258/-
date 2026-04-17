@@ -37,7 +37,7 @@ TOOLS = [
     {
         "type": "web_search_20250305",
         "name": "web_search",
-        "max_uses": 25,
+        "max_uses": 50,
     },
     {
         "name": "web_fetch",
@@ -118,40 +118,38 @@ def _save_csv(csv_content: str, output_file: Path) -> str:
         return f"❌ שגיאה בשמירה: {e}"
 
 
-SITE_DOMAINS = {
-    "Drushim":    "drushim.co.il",
-    "AllJobs":    "alljobs.co.il",
-    "JobsIL":     "jobs.il",
-    "GotFriends": "gotfriends.co.il",
-}
-
-
-def _build_site_search_queries() -> dict[str, list[str]]:
-    """Build web_search site: queries for Israeli job boards."""
-    short_queries = SEARCH_CONFIG.get("short_queries", {})
-    all_terms = short_queries.get("hebrew", []) + short_queries.get("english", [])
-    result: dict[str, list[str]] = {}
-    for site, domain in SITE_DOMAINS.items():
-        if not SEARCH_CONFIG["sites"].get(site, False):
-            continue
-        # 3 representative queries per site to keep max_uses budget
-        sample = all_terms[:3]
-        result[site] = [f'site:{domain} "{t}"' for t in sample]
-    return result
-
-
-def _build_linkedin_queries() -> list[str]:
+def _build_all_search_queries() -> list[str]:
+    """
+    Build a mixed query list that surfaces results from ALL job sites naturally.
+    Broad queries + LinkedIn-specific queries.
+    """
     queries = []
-    for t in SEARCH_CONFIG["short_queries"]["english"]:
-        queries.append(f'site:linkedin.com/jobs "{t}" Israel')
-    for t in SEARCH_CONFIG["short_queries"]["hebrew"]:
-        queries.append(f'site:linkedin.com/jobs "{t}"')
+
+    # ── Broad Hebrew searches (catch Drushim, AllJobs, JobsIL, GotFriends, LinkedIn)
+    hebrew_terms = SEARCH_CONFIG["short_queries"]["hebrew"]
+    for term in hebrew_terms:
+        queries.append(f'"{term}" משרה ישראל 2025')
+
+    # ── Broad English searches
+    english_terms = SEARCH_CONFIG["short_queries"]["english"]
+    for term in english_terms:
+        queries.append(f'"{term}" Israel job 2025')
+
+    # ── LinkedIn-specific for depth
+    for term in english_terms[:4]:
+        queries.append(f'site:linkedin.com/jobs "{term}" Israel')
+
+    # ── Explicit Israeli-board searches (domain mention, not site:)
+    il_boards = ["drushim.co.il", "alljobs.co.il", "jobs.il", "gotfriends.co.il"]
+    for term in hebrew_terms[:3]:
+        for board in il_boards:
+            queries.append(f'"{term}" {board}')
+
     return queries
 
 
 def _build_prompt(cv_content: str, output_file: Path) -> str:
-    site_queries  = _build_site_search_queries()
-    linkedin_queries = _build_linkedin_queries()
+    all_queries = _build_all_search_queries()
 
     cv_section = (
         f"\n**קורות חיים של המועמד:**\n{cv_content}\n"
@@ -159,13 +157,7 @@ def _build_prompt(cv_content: str, output_file: Path) -> str:
         else "\n**לא סופקו קורות חיים** — ציון יבוסס על הגדרות החיפוש בלבד.\n"
     )
 
-    linkedin_block = "\n".join(f"  • {q}" for q in linkedin_queries[:10])
-
-    il_blocks = ""
-    for site, queries in site_queries.items():
-        il_blocks += f"\n**{site}:**\n"
-        for q in queries:
-            il_blocks += f"  • {q}\n"
+    queries_block = "\n".join(f"  • {q}" for q in all_queries)
 
     return f"""
 אתה סוכן חיפוש עבודה מקצועי. בצע את כל השלבים הבאים בדייקנות מרבית.
@@ -178,19 +170,15 @@ def _build_prompt(cv_content: str, output_file: Path) -> str:
 - מיקום: רמת גן (עדיפות מרכז, גמישות סביר)
 
 ════════════════════════════════════════
-שלב 1 – LinkedIn (web_search)
+שלב 1 – חיפוש משרות (web_search)
 ════════════════════════════════════════
-בצע web_search עבור כל אחת מהשאילתות הבאות (כל אחת בנפרד):
-{linkedin_block}
-לכל תוצאה: שמור כותרת, חברה, מיקום, URL.
+בצע web_search עבור כל אחת מהשאילתות הבאות בנפרד.
+השאילתות מכסות LinkedIn, Drushim, AllJobs, JobsIL, GotFriends ועוד.
+חובה לבצע את כולן — אל תדלג על שאילתה:
 
-════════════════════════════════════════
-שלב 2 – אתרי עבודה ישראליים (web_search עם site:)
-════════════════════════════════════════
-חשוב: האתרים הישראליים מרונדרים בJavaScript — השתמש ב-web_search עם site: כדי לקבל תוצאות אינדקס גוגל.
-בצע web_search עבור כל שאילתה (כל אחת בנפרד):
-{il_blocks}
-לכל תוצאה: שמור כותרת, חברה, מיקום, URL המשרה הישיר.
+{queries_block}
+
+לכל תוצאה שמור: כותרת, חברה, מיקום, URL, שם האתר (LinkedIn / Drushim / AllJobs וכו').
 
 ════════════════════════════════════════
 שלב 3 – פרטי משרות
