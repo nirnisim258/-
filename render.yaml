@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: job-search-dashboard
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python web_app.py
+    plan: starter          # $7/month — always on, no sleep
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false        # set manually in Render dashboard
+      - key: DATA_DIR
+        value: /data
+      - key: PORT
+        value: 10000
+    disk:
+      name: job-data
+      mountPath: /data
+      sizeGB: 1            # $0.25/month for CSVs + tracking JSON

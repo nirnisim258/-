@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Sensitive
+.env
+*.env
+job_tracking.json
+
+# Results (optional — uncomment to exclude from repo)
+# results/
+
+# OS
+.DS_Store
+Thumbs.db

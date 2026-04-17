@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔍 דשבורד חיפוש עבודה</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      direction: rtl;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #1a1f2e 0%, #0d1117 100%);
+      border-bottom: 1px solid #2d3748;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      gap: 12px;
+    }
+    .header-title { font-size: 1.3rem; font-weight: 700; color: #e2e8f0; }
+    .header-sub { font-size: 0.8rem; color: #718096; margin-top: 2px; }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary { background: #4299e1; color: white; }
+    .btn-primary:hover { background: #3182ce; }
+    .btn-primary:disabled { background: #2d3748; color: #718096; cursor: not-allowed; }
+    .btn-success { background: #48bb78; color: white; }
+    .btn-success:hover { background: #38a169; }
+    .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex;
+      gap: 12px;
+      padding: 16px 24px;
+      background: #161b27;
+      border-bottom: 1px solid #2d3748;
+      flex-wrap: wrap;
+    }
+    .stat-card {
+      background: #1a2035;
+      border: 1px solid #2d3748;
+      border-radius: 10px;
+      padding: 10px 18px;
+      min-width: 100px;
+      text-align: center;
+    }
+    .stat-value { font-size: 1.6rem; font-weight: 700; color: #63b3ed; }
+    .stat-label { font-size: 0.7rem; color: #718096; margin-top: 2px; }
+    .stat-card.green .stat-value { color: #68d391; }
+    .stat-card.yellow .stat-value { color: #f6e05e; }
+    .stat-card.orange .stat-value { color: #f6ad55; }
+
+    /* ── Filters ── */
+    .filters {
+      display: flex;
+      gap: 10px;
+      padding: 14px 24px;
+      background: #161b27;
+      flex-wrap: wrap;
+      align-items: center;
+      border-bottom: 1px solid #2d3748;
+    }
+    .filter-label { font-size: 0.8rem; color: #a0aec0; }
+    .filter-select, .filter-input {
+      background: #1a2035;
+      border: 1px solid #2d3748;
+      color: #e2e8f0;
+      border-radius: 7px;
+      padding: 7px 12px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .filter-select:focus, .filter-input:focus { outline: 2px solid #4299e1; }
+    .filter-input { width: 200px; }
+    .badge-filter {
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      border: 2px solid transparent;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .badge-filter.active { border-color: #4299e1; background: #1a3a5c; }
+    .badge-filter.all { background: #2d3748; color: #e2e8f0; }
+    .badge-filter.score-high { background: #1a3a1a; color: #68d391; }
+    .badge-filter.score-mid { background: #3a3a1a; color: #f6e05e; }
+
+    /* ── Job grid ── */
+    .main { padding: 20px 24px; }
+    .jobs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── Job card ── */
+    .job-card {
+      background: #1a2035;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .job-card:hover { border-color: #4299e1; transform: translateY(-2px); }
+    .job-card.status-applied { border-color: #48bb78; }
+    .job-card.status-interview { border-color: #f6e05e; }
+    .job-card.status-rejected { opacity: 0.5; }
+
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .card-title { font-size: 1rem; font-weight: 700; color: #e2e8f0; line-height: 1.4; flex: 1; }
+    .score-badge {
+      font-size: 1rem; font-weight: 800;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .score-9, .score-10 { background: #1a3a1a; color: #68d391; border: 2px solid #48bb78; }
+    .score-7, .score-8 { background: #1a2d1a; color: #9ae6b4; border: 2px solid #38a169; }
+    .score-5, .score-6 { background: #3a3a1a; color: #f6e05e; border: 2px solid #d69e2e; }
+    .score-1, .score-2, .score-3, .score-4 { background: #2d2020; color: #fc8181; border: 2px solid #e53e3e; }
+
+    .card-company { font-size: 0.9rem; color: #90cdf4; font-weight: 600; }
+    .card-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+    .meta-chip {
+      background: #2d3748;
+      color: #a0aec0;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+    }
+
+    .card-notes {
+      font-size: 0.82rem;
+      color: #a0aec0;
+      background: #131928;
+      border-radius: 8px;
+      padding: 10px;
+      line-height: 1.6;
+      border-right: 3px solid #4299e1;
+    }
+    .card-notes.positive { border-color: #48bb78; }
+    .card-notes.warning { border-color: #f6e05e; }
+
+    .card-requirements {
+      font-size: 0.78rem;
+      color: #718096;
+      line-height: 1.5;
+    }
+    .card-requirements strong { color: #a0aec0; }
+
+    .card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+
+    .status-select {
+      flex: 1;
+      background: #2d3748;
+      border: 1px solid #4a5568;
+      color: #e2e8f0;
+      border-radius: 7px;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .status-select.status-applied { border-color: #48bb78; color: #68d391; }
+    .status-select.status-interview { border-color: #f6e05e; color: #f6e05e; }
+    .status-select.status-saved { border-color: #90cdf4; color: #90cdf4; }
+    .status-select.status-rejected { border-color: #fc8181; color: #fc8181; }
+
+    .notes-input {
+      width: 100%;
+      background: #131928;
+      border: 1px solid #2d3748;
+      color: #e2e8f0;
+      border-radius: 7px;
+      padding: 7px 10px;
+      font-size: 0.8rem;
+      resize: none;
+      font-family: inherit;
+      direction: rtl;
+    }
+    .notes-input:focus { outline: 2px solid #4299e1; }
+
+    /* ── Log panel ── */
+    .log-panel {
+      position: fixed;
+      bottom: 0; right: 0; left: 0;
+      height: 320px;
+      background: #0d1117;
+      border-top: 2px solid #4299e1;
+      display: none;
+      flex-direction: column;
+      z-index: 200;
+    }
+    .log-panel.visible { display: flex; }
+    .log-header {
+      padding: 10px 16px;
+      background: #161b27;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .log-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 16px;
+      font-family: 'Consolas', monospace;
+      font-size: 0.78rem;
+      color: #a0aec0;
+      direction: ltr;
+      text-align: left;
+    }
+    .log-line { line-height: 1.6; }
+    .log-line.step { color: #63b3ed; font-weight: 700; }
+    .log-line.success { color: #68d391; }
+    .log-line.error { color: #fc8181; }
+
+    .spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid #2d3748; border-top-color: #4299e1;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #718096;
+      grid-column: 1 / -1;
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 16px; }
+    .empty-state h3 { font-size: 1.2rem; margin-bottom: 8px; color: #a0aec0; }
+
+    .toast {
+      position: fixed;
+      bottom: 340px; left: 50%; transform: translateX(-50%);
+      background: #2d3748;
+      color: #e2e8f0;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: none;
+      z-index: 300;
+      border: 1px solid #4a5568;
+    }
+    .toast.visible { display: block; }
+    .toast.success { background: #1a3a1a; border-color: #48bb78; color: #68d391; }
+
+    @media (max-width: 600px) {
+      .jobs-grid { grid-template-columns: 1fr; }
+      .header { flex-wrap: wrap; }
+      .stats-bar { gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <div class="header-title">🔍 דשבורד חיפוש עבודה</div>
+    <div class="header-sub" id="last-updated">טוען...</div>
+  </div>
+  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+    <button class="btn btn-primary" id="search-btn" onclick="startSearch()">
+      <span id="search-icon">🚀</span>
+      <span id="search-label">חיפוש חדש</span>
+    </button>
+    <button class="btn" style="background:#2d3748;" onclick="toggleLog()">📋 לוג</button>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-bar" id="stats-bar">
+  <div class="stat-card"><div class="stat-value" id="stat-total">-</div><div class="stat-label">סך הכל משרות</div></div>
+  <div class="stat-card green"><div class="stat-value" id="stat-high">-</div><div class="stat-label">ציון 8-10 🔥</div></div>
+  <div class="stat-card yellow"><div class="stat-value" id="stat-mid">-</div><div class="stat-label">ציון 5-7 ✨</div></div>
+  <div class="stat-card orange"><div class="stat-value" id="stat-applied">-</div><div class="stat-label">הגשות</div></div>
+  <div class="stat-card" style="--c:#f6ad55"><div class="stat-value" id="stat-interview" style="color:#f6ad55;">-</div><div class="stat-label">ראיונות 🎯</div></div>
+</div>
+
+<!-- Filters -->
+<div class="filters">
+  <span class="filter-label">סנן:</span>
+  <span class="badge-filter all active" onclick="setScoreFilter('all', this)">הכל</span>
+  <span class="badge-filter score-high" onclick="setScoreFilter('high', this)">🔥 ציון 8+</span>
+  <span class="badge-filter score-mid" onclick="setScoreFilter('mid', this)">✨ ציון 5-7</span>
+  <select class="filter-select" id="site-filter" onchange="renderJobs()">
+    <option value="">כל האתרים</option>
+  </select>
+  <select class="filter-select" id="status-filter" onchange="renderJobs()">
+    <option value="">כל הסטטוסים</option>
+    <option value="new">חדש</option>
+    <option value="saved">שמור</option>
+    <option value="applied">הוגש</option>
+    <option value="interview">ראיון</option>
+    <option value="rejected">לא מתאים</option>
+  </select>
+  <input class="filter-input" id="search-filter" placeholder="חיפוש חופשי..." oninput="renderJobs()">
+  <span class="filter-label" id="count-label" style="margin-right:auto;"></span>
+</div>
+
+<!-- Jobs -->
+<div class="main">
+  <div class="jobs-grid" id="jobs-grid">
+    <div class="empty-state">
+      <div class="icon">⏳</div>
+      <h3>טוען משרות...</h3>
+    </div>
+  </div>
+</div>
+
+<!-- Log Panel -->
+<div class="log-panel" id="log-panel">
+  <div class="log-header">
+    <span>📋 לוג חיפוש בזמן אמת</span>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <span id="log-status" style="color:#a0aec0; font-weight:400;"></span>
+      <button class="btn btn-sm" style="background:#2d3748;" onclick="toggleLog()">✕ סגור</button>
+    </div>
+  </div>
+  <div class="log-body" id="log-body"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+let allJobs = [];
+let scoreFilter = 'all';
+let logOffset = 0;
+let logEventSource = null;
+let logVisible = false;
+
+// ── Init ──────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  loadJobs();
+  loadStats();
+  checkSearchStatus();
+});
+
+// ── Data loading ──────────────────────────────────────────────────────────
+async function loadJobs() {
+  try {
+    const res = await fetch('/api/jobs');
+    const data = await res.json();
+    allJobs = data.jobs || [];
+    document.getElementById('last-updated').textContent =
+      `עודכן: ${new Date().toLocaleTimeString('he-IL')} | ${allJobs.length} משרות`
+    populateSiteFilter();
+    renderJobs();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function loadStats() {
+  try {
+    const res = await fetch('/api/stats');
+    const d = await res.json();
+    document.getElementById('stat-total').textContent = d.total;
+    document.getElementById('stat-high').textContent = (d.by_score || {})['8-10'] || 0;
+    document.getElementById('stat-mid').textContent = (d.by_score || {})['5-7'] || 0;
+    document.getElementById('stat-applied').textContent = (d.by_status || {})['applied'] || 0;
+    document.getElementById('stat-interview').textContent = (d.by_status || {})['interview'] || 0;
+  } catch (e) {}
+}
+
+function populateSiteFilter() {
+  const sites = [...new Set(allJobs.map(j => j.site).filter(Boolean))].sort();
+  const sel = document.getElementById('site-filter');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">כל האתרים</option>' +
+    sites.map(s => `<option value="${s}" ${s===cur?'selected':''}>${s}</option>`).join('');
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function renderJobs() {
+  const siteF = document.getElementById('site-filter').value;
+  const statusF = document.getElementById('status-filter').value;
+  const textF = document.getElementById('search-filter').value.toLowerCase();
+
+  let jobs = allJobs.filter(j => {
+    if (scoreFilter === 'high' && j.score < 8) return false;
+    if (scoreFilter === 'mid' && (j.score < 5 || j.score > 7)) return false;
+    if (siteF && j.site !== siteF) return false;
+    if (statusF && j.status !== statusF) return false;
+    if (textF) {
+      const hay = (j.title + j.company + j.location + j.notes + j.requirements).toLowerCase();
+      if (!hay.includes(textF)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('count-label').textContent = `${jobs.length} תוצאות`;
+
+  const grid = document.getElementById('jobs-grid');
+  if (jobs.length === 0) {
+    grid.innerHTML = `<div class="empty-state">
+      <div class="icon">🔎</div>
+      <h3>לא נמצאו משרות</h3>
+      <p>שנה את הפילטרים או הרץ חיפוש חדש</p>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = jobs.map(j => buildCard(j)).join('');
+}
+
+function buildCard(j) {
+  const scoreClass = `score-${Math.min(Math.max(j.score, 1), 10)}`;
+  const statusClass = j.status !== 'new' ? `status-${j.status}` : '';
+  const statusEmoji = {new:'🆕', saved:'🔖', applied:'✅', interview:'🎯', rejected:'❌'}[j.status] || '';
+
+  const notesClass = j.score >= 8 ? 'positive' : j.score >= 5 ? '' : 'warning';
+  const id = CSS.escape(j.id);
+
+  return `<div class="job-card ${statusClass}" id="card-${id}">
+    <div class="card-top">
+      <div>
+        <div class="card-title">${esc(j.title)}</div>
+        <div class="card-company">🏢 ${esc(j.company)}</div>
+      </div>
+      <div class="score-badge ${scoreClass}">${j.score}</div>
+    </div>
+
+    <div class="card-meta">
+      ${j.location ? `<span class="meta-chip">📍 ${esc(j.location)}</span>` : ''}
+      ${j.site ? `<span class="meta-chip">🌐 ${esc(j.site)}</span>` : ''}
+      ${statusEmoji ? `<span class="meta-chip">${statusEmoji} ${statusLabel(j.status)}</span>` : ''}
+    </div>
+
+    ${j.notes ? `<div class="card-notes ${notesClass}">${esc(j.notes)}</div>` : ''}
+    ${j.requirements ? `<div class="card-requirements"><strong>דרישות:</strong> ${esc(j.requirements)}</div>` : ''}
+
+    <div class="card-actions">
+      <select class="status-select status-${j.status}" onchange="updateStatus('${j.id}', this.value, this)">
+        <option value="new" ${j.status==='new'?'selected':''}>🆕 חדש</option>
+        <option value="saved" ${j.status==='saved'?'selected':''}>🔖 שמור</option>
+        <option value="applied" ${j.status==='applied'?'selected':''}>✅ הוגש</option>
+        <option value="interview" ${j.status==='interview'?'selected':''}>🎯 ראיון</option>
+        <option value="rejected" ${j.status==='rejected'?'selected':''}>❌ לא מתאים</option>
+      </select>
+      ${j.url ? `<a href="${esc(j.url)}" target="_blank" class="btn btn-primary btn-sm" onclick="markApplying('${j.id}')">🔗 פתח</a>` : ''}
+    </div>
+
+    <textarea class="notes-input" rows="2" placeholder="הערות אישיות..."
+      onblur="saveNotes('${j.id}', this.value)">${esc(j.user_notes || '')}</textarea>
+
+    ${j.applied_at ? `<div style="font-size:0.75rem;color:#718096;">✅ הוגש: ${j.applied_at}</div>` : ''}
+  </div>`;
+}
+
+function statusLabel(s) {
+  return {new:'חדש', saved:'שמור', applied:'הוגש', interview:'ראיון', rejected:'לא מתאים'}[s] || s;
+}
+
+function esc(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Filters ───────────────────────────────────────────────────────────────
+function setScoreFilter(val, el) {
+  scoreFilter = val;
+  document.querySelectorAll('.badge-filter').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderJobs();
+}
+
+// ── Job actions ───────────────────────────────────────────────────────────
+async function updateStatus(jobId, status, selectEl) {
+  selectEl.className = `status-select status-${status}`;
+  const job = allJobs.find(j => j.id === jobId);
+  if (job) job.status = status;
+
+  await fetch(`/api/jobs/${encodeURIComponent(jobId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  renderJobs();
+  loadStats();
+  showToast(status === 'applied' ? '✅ סומן כהוגש!' : '💾 עודכן', status === 'applied' ? 'success' : '');
+}
+
+async function saveNotes(jobId, notes) {
+  const job = allJobs.find(j => j.id === jobId);
+  if (job) job.user_notes = notes;
+  await fetch(`/api/jobs/${encodeURIComponent(jobId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ user_notes: notes }),
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+
+function markApplying(jobId) {
+  const job = allJobs.find(j => j.id === jobId);
+  if (job && job.status === 'new') {
+    updateStatus(jobId, 'applied', { className: '' });
+  }
+}
+
+// ── Search ────────────────────────────────────────────────────────────────
+async function startSearch() {
+  const btn = document.getElementById('search-btn');
+  const label = document.getElementById('search-label');
+  const icon = document.getElementById('search-icon');
+
+  const res = await fetch('/api/search/start', { method: 'POST' });
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}));
+    showToast('⚠️ ' + (d.error || 'שגיאה'), '');
+    return;
+  }
+
+  btn.disabled = true;
+  icon.innerHTML = '<span class="spinner"></span>';
+  label.textContent = 'מחפש...';
+
+  showLog();
+  startLogStream();
+}
+
+async function checkSearchStatus() {
+  const res = await fetch('/api/search/status').catch(() => null);
+  if (!res) return;
+  const d = await res.json();
+  if (d.running) {
+    document.getElementById('search-btn').disabled = true;
+    document.getElementById('search-icon').innerHTML = '<span class="spinner"></span>';
+    document.getElementById('search-label').textContent = 'מחפש...';
+    showLog();
+    startLogStream();
+  }
+}
+
+function startLogStream() {
+  if (logEventSource) logEventSource.close();
+  logOffset = 0;
+  const logBody = document.getElementById('log-body');
+  logBody.innerHTML = '';
+  document.getElementById('log-status').textContent = '⏳ רץ...';
+
+  logEventSource = new EventSource(`/api/search/log?offset=0`);
+  logEventSource.onmessage = (e) => {
+    if (e.data === '__DONE__') {
+      logEventSource.close();
+      document.getElementById('search-btn').disabled = false;
+      document.getElementById('search-icon').textContent = '🚀';
+      document.getElementById('search-label').textContent = 'חיפוש חדש';
+      document.getElementById('log-status').textContent = '✅ הושלם';
+      loadJobs();
+      loadStats();
+      showToast('✅ החיפוש הושלם! נטענות משרות...', 'success');
+      return;
+    }
+    const line = e.data;
+    const div = document.createElement('div');
+    div.className = 'log-line' +
+      (line.includes('שלב') || line.includes('════') ? ' step' : '') +
+      (line.includes('✅') || line.includes('הושלם') ? ' success' : '') +
+      (line.includes('❌') || line.includes('שגיאה') ? ' error' : '');
+    div.textContent = line;
+    logBody.appendChild(div);
+    logBody.scrollTop = logBody.scrollHeight;
+  };
+  logEventSource.onerror = () => {
+    document.getElementById('log-status').textContent = '⚠️ נותקה החיבור';
+  };
+}
+
+// ── Log panel ─────────────────────────────────────────────────────────────
+function showLog() {
+  logVisible = true;
+  document.getElementById('log-panel').classList.add('visible');
+  document.querySelector('.main').style.paddingBottom = '340px';
+}
+
+function toggleLog() {
+  logVisible = !logVisible;
+  document.getElementById('log-panel').classList.toggle('visible', logVisible);
+  document.querySelector('.main').style.paddingBottom = logVisible ? '340px' : '20px';
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, cls) {
+  clearTimeout(toastTimer);
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast visible ' + (cls || '');
+  toastTimer = setTimeout(() => t.classList.remove('visible'), 3000);
+}
+</script>
+</body>
+</html>
