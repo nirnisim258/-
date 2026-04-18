@@ -7,6 +7,7 @@ No dependency on claude_agent_sdk or local Claude CLI.
 import csv
 import io
 import os
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -20,7 +21,7 @@ MODEL = "claude-sonnet-4-6"
 MAX_TOKENS = 8192
 MAX_TURNS = 80
 FETCH_TIMEOUT = 20
-FETCH_MAX_BYTES = 60_000
+FETCH_MAX_BYTES = 12_000  # ~3,000 tokens per fetch — stays under rate limit
 
 HEADERS = {
     "User-Agent": (
@@ -276,23 +277,28 @@ def run_search(log_callback, data_dir: Path | None = None) -> str:
         turn += 1
         log_callback(f"\n[תור {turn}]")
 
-        try:
-            response = client.beta.messages.create(
-                model=MODEL,
-                max_tokens=MAX_TOKENS,
-                system=[
-                    {
-                        "type": "text",
-                        "text": SYSTEM_PROMPT,
-                        "cache_control": {"type": "ephemeral"},
-                    }
-                ],
-                tools=TOOLS,
-                messages=messages,
-                betas=["web-search-2025-03-05"],
-            )
-        except anthropic.APIError as e:
-            log_callback(f"❌ API שגיאה: {e}")
+        response = None
+        for attempt in range(4):
+            try:
+                response = client.beta.messages.create(
+                    model=MODEL,
+                    max_tokens=MAX_TOKENS,
+                    system=[{"type": "text", "text": SYSTEM_PROMPT,
+                              "cache_control": {"type": "ephemeral"}}],
+                    tools=TOOLS,
+                    messages=messages,
+                    betas=["web-search-2025-03-05"],
+                )
+                break
+            except anthropic.RateLimitError:
+                wait = 60 * (attempt + 1)
+                log_callback(f"⏳ Rate limit — ממתין {wait} שניות...")
+                time.sleep(wait)
+            except anthropic.APIError as e:
+                log_callback(f"❌ API שגיאה: {e}")
+                break
+        if response is None:
+            log_callback("❌ נכשל אחרי 4 ניסיונות")
             break
 
         # Log text output
