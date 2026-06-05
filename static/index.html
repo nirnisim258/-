@@ -130,6 +130,7 @@
     }
     .job-card:hover { border-color: #4299e1; transform: translateY(-2px); }
     .job-card.status-applied { border-color: #48bb78; }
+    .job-card.status-opened { border-color: #b794f4; }
     .job-card.status-interview { border-color: #f6e05e; }
     .job-card.status-rejected { opacity: 0.5; }
 
@@ -189,6 +190,7 @@
       cursor: pointer;
     }
     .status-select.status-applied { border-color: #48bb78; color: #68d391; }
+    .status-select.status-opened { border-color: #b794f4; color: #d6bcfa; }
     .status-select.status-interview { border-color: #f6e05e; color: #f6e05e; }
     .status-select.status-saved { border-color: #90cdf4; color: #90cdf4; }
     .status-select.status-rejected { border-color: #fc8181; color: #fc8181; }
@@ -320,6 +322,7 @@
     <option value="">כל הסטטוסים</option>
     <option value="new">חדש</option>
     <option value="saved">שמור</option>
+    <option value="opened">נפצה</option>
     <option value="applied">הוגש</option>
     <option value="interview">ראיון</option>
     <option value="rejected">לא מתאים</option>
@@ -438,7 +441,7 @@ function renderJobs() {
 function buildCard(j) {
   const scoreClass = `score-${Math.min(Math.max(j.score, 1), 10)}`;
   const statusClass = j.status !== 'new' ? `status-${j.status}` : '';
-  const statusEmoji = {new:'🆕', saved:'🔖', applied:'✅', interview:'🎯', rejected:'❌'}[j.status] || '';
+  const statusEmoji = {new:'🆕', saved:'🔖', opened:'👁️', applied:'✅', interview:'🎯', rejected:'❌'}[j.status] || '';
 
   const notesClass = j.score >= 8 ? 'positive' : j.score >= 5 ? '' : 'warning';
   const id = CSS.escape(j.id);
@@ -465,6 +468,7 @@ function buildCard(j) {
       <select class="status-select status-${j.status}" onchange="updateStatus('${j.id}', this.value, this)">
         <option value="new" ${j.status==='new'?'selected':''}>🆕 חדש</option>
         <option value="saved" ${j.status==='saved'?'selected':''}>🔖 שמור</option>
+        <option value="opened" ${j.status==='opened'?'selected':''}>👁️ נפצה</option>
         <option value="applied" ${j.status==='applied'?'selected':''}>✅ הוגש</option>
         <option value="interview" ${j.status==='interview'?'selected':''}>🎯 ראיון</option>
         <option value="rejected" ${j.status==='rejected'?'selected':''}>❌ לא מתאים</option>
@@ -480,7 +484,7 @@ function buildCard(j) {
 }
 
 function statusLabel(s) {
-  return {new:'חדש', saved:'שמור', applied:'הוגש', interview:'ראיון', rejected:'לא מתאים'}[s] || s;
+  return {new:'חדש', saved:'שמור', opened:'נפצה', applied:'הוגש', interview:'ראיון', rejected:'לא מתאים'}[s] || s;
 }
 
 function esc(str) {
@@ -509,7 +513,7 @@ async function updateStatus(jobId, status, selectEl) {
 
   renderJobs();
   loadStats();
-  showToast(status === 'applied' ? '✅ סומן כהוגש!' : '💾 עודכן', status === 'applied' ? 'success' : '');
+  showToast(status === 'applied' ? '✅ סומן כהוגש!' : status === 'opened' ? '👁️ סומן כנפצה!' : '💾 עודכן', status === 'applied' || status === 'opened' ? 'success' : '');
 }
 
 async function saveNotes(jobId, notes) {
@@ -525,7 +529,7 @@ async function saveNotes(jobId, notes) {
 function markApplying(jobId) {
   const job = allJobs.find(j => j.id === jobId);
   if (job && job.status === 'new') {
-    updateStatus(jobId, 'applied', { className: '' });
+    updateStatus(jobId, 'opened', { className: '' });
   }
 }
 
